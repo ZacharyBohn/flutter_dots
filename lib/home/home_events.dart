@@ -6,3 +6,5 @@ class OnPointerMove extends HomeEvent {
   final PointerMoveEvent details;
   OnPointerMove(this.details);
 }
+
+class OnPointerDown extends HomeEvent {}

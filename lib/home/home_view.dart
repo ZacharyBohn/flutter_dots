@@ -1,10 +1,9 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
+import 'package:flutter_dots/models/free_form.model.dart';
 import 'package:provider/provider.dart';
-import 'package:vector_math/vector_math.dart' as vector;
 import 'dart:ui' as ui;
 
+import '../models/point.model.dart';
 import 'home_state.dart';
 
 class HomeView extends StatelessWidget {
@@ -16,6 +15,9 @@ class HomeView extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.black,
       body: Listener(
+        onPointerDown: (_) {
+          state.onEvent(OnPointerDown());
+        },
         onPointerMove: (details) {
           state.onEvent(OnPointerMove(details));
         },
@@ -24,12 +26,8 @@ class HomeView extends StatelessWidget {
             CustomPaint(
               size: size,
               painter: SmoothLinePainter(
-                offsets: state.offsets,
-                // offsets: [
-                //   Offset(100, 100),
-                //   Offset(300, 100),
-                //   Offset(200, 200),
-                // ],
+                freeForms: state.freeForms,
+                debugPoints: false,
               ),
             ),
           ],
@@ -40,46 +38,46 @@ class HomeView extends StatelessWidget {
 }
 
 class SmoothLinePainter extends CustomPainter {
-  final List<Offset> offsets;
+  final List<FreeForm> freeForms;
   final bool debugPoints;
 
   SmoothLinePainter({
-    required this.offsets,
+    required this.freeForms,
     this.debugPoints = false,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (offsets.length < 2) {
-      return;
+    for (var freeForm in freeForms) {
+      final points = freeForm.points;
+      if (points.length < 2) {
+        return;
+      }
+      for (int i = 1; i < points.length - 1; i++) {
+        _drawBezierPath(
+          previous: points[i - 1],
+          current: points[i],
+          next: points[i + 1],
+          canvas: canvas,
+        );
+      }
+
+      final paint = Paint()
+        ..color = Colors.green
+        ..strokeWidth = 2.0
+        ..style = PaintingStyle.stroke;
+      final secondToLast = freeForm.points[freeForm.points.length - 2];
+      final last = freeForm.points[freeForm.points.length - 1];
+      canvas.drawLine(secondToLast.offset, last.offset, paint);
     }
-    final paint = Paint()
-      ..color = Colors.green
-      ..strokeWidth = 2.0
-      ..style = PaintingStyle.stroke;
 
-    Path path = Path();
-    path.moveTo(offsets.first.dx, offsets.first.dy);
-
-    for (int i = 0; i < offsets.length - 1; i++) {
-      final offset = offsets[i];
-      final nextOffset = offsets[i + 1];
-
-      final averageOfCurrentAndNext = _getMidPoint(offset, nextOffset);
-
-      // current offset is the control point
-      // draw to the mid point between current and next
-      path.quadraticBezierTo(
-        offset.dx,
-        offset.dy,
-        averageOfCurrentAndNext.dx,
-        averageOfCurrentAndNext.dy,
-      );
-    }
-    path.lineTo(offsets.last.dx, offsets.last.dy);
-
-    canvas.drawPath(path, paint);
     if (debugPoints) {
+      final offsets = <Offset>[];
+      for (var x in freeForms) {
+        for (var y in x.points) {
+          offsets.add(y.offset);
+        }
+      }
       Paint pointPaint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 5
@@ -89,10 +87,60 @@ class SmoothLinePainter extends CustomPainter {
     return;
   }
 
+  void _drawBezierPath({
+    required PointModel previous,
+    required PointModel current,
+    required PointModel next,
+    required Canvas canvas,
+  }) {
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0
+      ..shader = ui.Gradient.linear(
+        current.offset,
+        next.offset,
+        [
+          current.color,
+          next.color,
+        ],
+      );
+    Path path = Path();
+    path.moveTo(previous.offset.dx, previous.offset.dy);
+
+    final averageOfCurrentAndNext = _getMidPoint(
+      current.offset,
+      next.offset,
+    );
+    final opposite = _getOppositeFrom(
+      next.offset,
+      current.offset,
+    );
+    final controlPoint = _getMidPoint(
+      opposite,
+      averageOfCurrentAndNext,
+    );
+
+    // TODO: add in linear gradience
+    // current offset is the control point
+    // draw to the mid point between current and next
+    path.quadraticBezierTo(
+      controlPoint.dx,
+      controlPoint.dy,
+      current.offset.dx,
+      current.offset.dy,
+    );
+    canvas.drawPath(path, paint);
+    return;
+  }
+
   Offset _getMidPoint(Offset offset1, Offset offset2) {
     double midDx = (offset1.dx + offset2.dx) / 2;
     double midDy = (offset1.dy + offset2.dy) / 2;
     return Offset(midDx, midDy);
+  }
+
+  Offset _getOppositeFrom(Offset from, Offset target) {
+    return -(from - target) + target;
   }
 
   @override
