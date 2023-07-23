@@ -8,3 +8,11 @@ class OnPointerMove extends HomeEvent {
 }
 
 class OnPointerDown extends HomeEvent {}
+
+class OnPointerUp extends HomeEvent {}
+
+class OnRedButtonTap extends HomeEvent {}
+
+class OnPurpleButtonTap extends HomeEvent {}
+
+class OnBlueButtonTap extends HomeEvent {}

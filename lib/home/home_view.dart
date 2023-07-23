@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'dart:ui' as ui;
 
 import '../models/point.model.dart';
+import 'components/floating_button.dart';
 import 'home_state.dart';
 
 class HomeView extends StatelessWidget {
@@ -14,24 +15,76 @@ class HomeView extends StatelessWidget {
     Size size = MediaQuery.of(context).size;
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Listener(
-        onPointerDown: (_) {
-          state.onEvent(OnPointerDown());
-        },
-        onPointerMove: (details) {
-          state.onEvent(OnPointerMove(details));
-        },
-        child: Stack(
-          children: [
-            CustomPaint(
+      body: Stack(
+        children: [
+          Listener(
+            behavior: HitTestBehavior.opaque,
+            onPointerDown: (_) {
+              state.onEvent(OnPointerDown());
+            },
+            onPointerMove: (details) {
+              state.onEvent(OnPointerMove(details));
+            },
+            child: CustomPaint(
               size: size,
+              isComplex: true,
               painter: SmoothLinePainter(
                 freeForms: state.freeForms,
                 debugPoints: false,
               ),
             ),
-          ],
-        ),
+          ),
+          Positioned(
+            right: 10,
+            bottom: 10,
+            child: FloatingButton(
+              color: Colors.red,
+              onTap: () {
+                state.onEvent(OnRedButtonTap());
+              },
+            ),
+          ),
+          Positioned(
+            right: 10,
+            bottom: 10 + 35 + 10,
+            child: FloatingButton(
+              color: Color.fromRGBO(30, 60, 210, 1.0),
+              onTap: () {
+                state.onEvent(OnBlueButtonTap());
+              },
+              child: Center(
+                child: Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    color: Colors.black,
+                  ),
+                  child: Center(
+                    child: Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        color: state.stylusColor,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 10,
+            bottom: 10 + 35 + 10 + 35 + 10,
+            child: FloatingButton(
+              color: Colors.purple,
+              onTap: () {
+                state.onEvent(OnPurpleButtonTap());
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -48,6 +101,7 @@ class SmoothLinePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    // int start = DateTime.now().millisecondsSinceEpoch;
     for (var freeForm in freeForms) {
       final points = freeForm.points;
       if (points.length < 2) {
@@ -61,9 +115,9 @@ class SmoothLinePainter extends CustomPainter {
           canvas: canvas,
         );
       }
-
+      if (points.length < 2) continue;
       final paint = Paint()
-        ..color = Colors.green
+        ..color = points.last.color
         ..strokeWidth = 2.0
         ..style = PaintingStyle.stroke;
       final secondToLast = freeForm.points[freeForm.points.length - 2];
@@ -84,6 +138,9 @@ class SmoothLinePainter extends CustomPainter {
         ..color = Colors.white;
       canvas.drawPoints(ui.PointMode.points, offsets, pointPaint);
     }
+
+    // int end = DateTime.now().millisecondsSinceEpoch;
+    // print('paint done in ${end - start}ms');
     return;
   }
 
