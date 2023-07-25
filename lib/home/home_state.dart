@@ -72,14 +72,14 @@ class HomeState extends StateProvider<Home, HomeEvent> {
       _freeFormHandler(event);
     }
     if (event is OnRedButtonTap) {
-      _deleteAllDrawings();
       _consumeTimer?.cancel();
+      _deleteAllDrawings();
     }
     if (event is OnBlueButtonTap) {
       _cycleStylusColor();
     }
     if (event is OnPurpleButtonTap) {
-      if (_consumeTimer == null) {
+      if (_consumeTimer?.isActive != true) {
         _startConsume();
       } else {
         _consumeTimer!.cancel();
@@ -101,6 +101,7 @@ class HomeState extends StateProvider<Home, HomeEvent> {
   void _moveAllPointsTowardsCenter() {
     Size size = MediaQuery.of(context).size;
     Offset center = Offset(size.width / 2, size.height / 2);
+    final freeFormsToDelete = <FreeForm>[];
     for (var freeForm in freeForms) {
       for (var point in freeForm.points) {
         point.offset = point.offset.translateTowards(
@@ -108,6 +109,16 @@ class HomeState extends StateProvider<Home, HomeEvent> {
           pixels: 1,
         );
       }
+      if (freeForm.points.every(
+          (element) => element.offset.isWithin(pixels: 1, other: center))) {
+        freeFormsToDelete.add(freeForm);
+      }
+    }
+    for (var freeForm in freeFormsToDelete) {
+      freeForms.remove(freeForm);
+    }
+    if (freeForms.isEmpty) {
+      _consumeTimer?.cancel();
     }
 
     notifyListeners();
